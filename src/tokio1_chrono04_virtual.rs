@@ -1,5 +1,5 @@
 use crate::private::chrono::TIME_DELTA_ZERO;
-use crate::{Clock, Scheduler};
+use crate::{impl_clock, SchedulerOnce};
 use chrono04::TimeDelta;
 use ::chrono04::{DateTime, Utc};
 use std::collections::BTreeMap;
@@ -123,11 +123,13 @@ impl VirtualClockState {
   }
 }
 
-impl Clock for VirtualTokio1Chrono04Clock {
-  type Instant = DateTime<Utc>;
+impl_clock! {
+  impl Clock for VirtualTokio1Chrono04Clock {
+    type Instant = DateTime<Utc>;
 
-  fn now(&self) -> DateTime<Utc> {
-    self.state.now()
+    fn now(&this)-> Self::Instant {
+      this.state.now()
+    }
   }
 }
 
@@ -156,10 +158,10 @@ impl Future for VirtualTimer {
   }
 }
 
-impl Scheduler for VirtualTokio1Chrono04Clock {
+impl SchedulerOnce for &'_ VirtualTokio1Chrono04Clock {
   type Timer = VirtualTimer;
 
-  fn schedule(&self, deadline: DateTime<Utc>) -> Self::Timer {
+  fn schedule_once(self, deadline: DateTime<Utc>) -> Self::Timer {
     let state = Arc::clone(&self.state);
     let key = state.schedule(deadline);
     VirtualTimer { key, state }
@@ -169,7 +171,7 @@ impl Scheduler for VirtualTokio1Chrono04Clock {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::ChronoClock;
+  use crate::{ChronoClock, Clock};
   use ::chrono04::TimeDelta;
   use chrono04::TimeZone;
   use std::sync::LazyLock;

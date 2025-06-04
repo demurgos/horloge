@@ -1,15 +1,17 @@
-use crate::Clock;
+use crate::impl_clock;
 use ::std::time::Instant;
 
 /// Standard library clock using the system time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SystemStdClock;
 
-impl Clock for SystemStdClock {
-  type Instant = Instant;
+impl_clock! {
+  impl Clock for SystemStdClock {
+    type Instant = Instant;
 
-  fn now(&self) -> Self::Instant {
-    Instant::now()
+    fn now(&this)-> Self::Instant {
+      Instant::now()
+    }
   }
 }
 
@@ -19,7 +21,7 @@ impl Clock for SystemStdClock {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::StdClock;
+  use crate::{Clock, ClockOnce, StdClock};
   use ::std::time::Duration;
   const ONE_YEAR: Duration = Duration::new(365 * 24 * 60 * 60, 0);
 
@@ -35,7 +37,7 @@ mod tests {
     TyClock: Clock<Instant = Instant>,
   {
     let one_year_ago = Instant::now() - ONE_YEAR;
-    let now = clock.now();
+    let now = clock.now_once();
     assert!(now > one_year_ago);
     use_std_clock(clock);
   }

@@ -1,17 +1,19 @@
-use crate::{Clock, Scheduler};
-use ::chrono04::{DateTime, Utc};
-use ::tokio1::time::{sleep_until, Instant};
 use crate::private::chrono::chrono_to_std;
+use crate::{impl_clock, SchedulerOnce};
+use ::chrono04::{DateTime, Utc};
+use tokio1::time::{sleep_until, Instant};
 
 /// Tokio scheduler with chrono types using the system time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SystemTokio1Chrono04Clock;
 
-impl Clock for SystemTokio1Chrono04Clock {
-  type Instant = DateTime<Utc>;
+impl_clock! {
+  impl Clock for SystemTokio1Chrono04Clock {
+    type Instant = DateTime<Utc>;
 
-  fn now(&self) -> Self::Instant {
-    Utc::now()
+    fn now(&this)-> Self::Instant {
+      Utc::now()
+    }
   }
 }
 
@@ -19,10 +21,10 @@ impl Clock for SystemTokio1Chrono04Clock {
 /// its `Scheduler` implementation.
 pub type SystemTokio1Chrono04Timer = ::tokio1::time::Sleep;
 
-impl Scheduler for SystemTokio1Chrono04Clock {
+impl SchedulerOnce for &'_ SystemTokio1Chrono04Clock {
   type Timer = SystemTokio1Chrono04Timer;
 
-  fn schedule(&self, deadline: DateTime<Utc>) -> Self::Timer {
+  fn schedule_once(self, deadline: DateTime<Utc>) -> Self::Timer {
     sleep_until(Instant::from_std(chrono_to_std(deadline)))
   }
 }
@@ -30,7 +32,7 @@ impl Scheduler for SystemTokio1Chrono04Clock {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::ChronoClock;
+  use crate::{ChronoClock, Clock};
   use ::chrono04::TimeDelta;
   const ONE_YEAR: TimeDelta = TimeDelta::new(365 * 24 * 60 * 60, 0).expect("constant time delta is valid");
 
