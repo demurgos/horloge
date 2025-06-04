@@ -92,6 +92,20 @@ where
   }
 }
 
+/// Alias trait for `ChronoClock + Scheduler`
+#[cfg(feature = "std")]
+pub trait StdScheduler: StdClock + Scheduler {}
+
+#[cfg(feature = "std")]
+impl<T> StdScheduler for T where T: StdClock + Scheduler {}
+
+/// Alias trait for `ChronoClock + ErasedScheduler`
+#[cfg(feature = "std")]
+pub trait ErasedStdScheduler: StdClock + ErasedScheduler {}
+
+#[cfg(feature = "std")]
+impl<T> ErasedStdScheduler for T where T: StdClock + ErasedScheduler {}
+
 /// Trait for a source of the current time, as a [`chrono::DateTime<Utc>`](::chrono04::DateTime).
 ///
 /// This trait is automatically implemented for values implementing
@@ -110,3 +124,17 @@ where
     self.now()
   }
 }
+
+/// Alias trait for `ChronoClock + Scheduler`
+#[cfg(feature = "chrono04")]
+pub trait ChronoScheduler: ChronoClock + Scheduler {}
+
+#[cfg(feature = "chrono04")]
+impl<T> ChronoScheduler for T where T: ChronoClock + Scheduler {}
+
+/// Alias trait for `ChronoClock + ErasedScheduler`
+#[cfg(feature = "chrono04")]
+pub trait ErasedChronoScheduler: ChronoClock + ErasedScheduler {}
+
+#[cfg(feature = "chrono04")]
+impl<T> ErasedChronoScheduler for T where T: ChronoClock + ErasedScheduler {}
