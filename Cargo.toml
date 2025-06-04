@@ -1,0 +1,18 @@
+[package]
+name = "horloge"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+chrono04 = { package = "chrono", version = "0.4.41", default-features = false, features = ["clock"], optional = true }
+tokio1 = { package = "tokio", version = "1.45.1", default-features = false, features = ["time"], optional = true }
+
+[features]
+default = ["std", "chrono04", "tokio1"]
+
+# Enable integration with the standard library
+std = []
+# Enable integration with the `chrono` library, version 0.4
+chrono04 = ["dep:chrono04"]
+# Enable integration with the `tokio` library, version 1.x
+tokio1 = ["dep:tokio1"]
