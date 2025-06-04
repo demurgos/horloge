@@ -1,4 +1,4 @@
-# Next
+# 0.1.1 (2025-06-04)
 
 - **[Feature]** Add `ErasedScheduler` trait, a dyn-compatible version of `Scheduler`.
 - **[Feature]** Add alias trait for scheduler based on `StdClock` and `ChronoClock`.
