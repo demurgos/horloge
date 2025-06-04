@@ -26,7 +26,7 @@ pub use tokio1_chrono04_virtual::*;
 /// such as `StdClock`.
 pub trait Clock {
   /// Type used to represent a point in time.
-  type Instant;
+  type Instant: PartialOrd;
 
   /// Returns a value representing the current point in time.
   fn now(&self) -> Self::Instant;
