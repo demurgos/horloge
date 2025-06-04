@@ -58,6 +58,21 @@ pub trait Scheduler: Clock {
   fn schedule(&self, deadline: <Self as Clock>::Instant) -> Self::Timer;
 }
 
+/// Dyn-compatible version of [`Scheduler`].
+pub trait ErasedScheduler: Clock {
+  fn erased_schedule(&self, deadline: <Self as Clock>::Instant) -> Box<dyn Future<Output = ()>>;
+}
+
+impl<T> ErasedScheduler for T
+where
+  T: Scheduler,
+  T::Timer: Send + Sync + 'static,
+{
+  fn erased_schedule(&self, deadline: <Self as Clock>::Instant) -> Box<dyn Future<Output = ()>> {
+    Box::new(self.schedule(deadline))
+  }
+}
+
 /// Trait for a source of the current time, as a standard [`Instant`](::std::time::Instant).
 ///
 /// This trait is automatically implemented for values implementing
