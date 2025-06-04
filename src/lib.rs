@@ -11,9 +11,10 @@ mod tokio1_chrono04_system;
 #[cfg(all(feature = "std", feature = "chrono04", feature = "tokio1"))]
 mod tokio1_chrono04_virtual;
 
-mod private;
 mod ext;
+mod private;
 
+pub use ext::*;
 #[cfg(feature = "std")]
 pub use std_system::*;
 #[cfg(feature = "std")]
@@ -22,7 +23,6 @@ pub use std_virtual::*;
 pub use tokio1_chrono04_system::*;
 #[cfg(all(feature = "std", feature = "chrono04", feature = "tokio1"))]
 pub use tokio1_chrono04_virtual::*;
-pub use ext::*;
 
 #[macro_export]
 macro_rules! impl_clock {
@@ -49,6 +49,38 @@ macro_rules! impl_clock {
     impl $crate::Clock for $clock {
       #[allow(unused_variables)]
       fn now(&self) -> Self::Instant {
+        let $this = self;
+        $body
+      }
+    }
+  };
+}
+
+#[macro_export]
+macro_rules! impl_sleep {
+  {
+    impl Sleep<$duration:ty> for $sleep:ty {
+      type Timer = $timer:ty;
+      fn sleep(&$this:ident, $d:ident: $d_ty:ty) -> Self::Timer $body:block
+    }
+  } => {
+    impl $crate::SleepOnce<$duration> for $sleep {
+      type Timer = $timer;
+
+      fn sleep_once(mut self, duration: $duration) -> Self::Timer {
+        $crate::SleepMut::sleep_mut(&mut self, duration)
+      }
+    }
+
+    impl $crate::SleepMut<$duration> for $sleep {
+      fn sleep_mut(&mut self, duration: $duration) -> Self::Timer {
+        $crate::Sleep::sleep(&*self, duration)
+      }
+    }
+
+    impl $crate::Sleep<$duration> for $sleep {
+      #[allow(unused_variables)]
+      fn sleep(&self, $d: $d_ty) -> Self::Timer {
         let $this = self;
         $body
       }
@@ -135,7 +167,7 @@ where
 /// A monotonic clock is a clock where calls to [`ClockOnce::now`] always return
 /// a value equal or larger than all previously returned values.
 ///
-/// If this [`ClockOnce`] implementation also implements [`Scheduler`], then
+/// If this [`ClockOnce`] implementation also implements [`Sleep`], then
 /// both `now` and `schedule` are consistent.
 ///
 /// # Safety
@@ -146,7 +178,7 @@ where
 ///    relationship relative to `let second = clock.now();`, then
 ///    `first <= second`.
 ///
-/// 2. If `clock` also implements [`Scheduler`], the implementation should
+/// 2. If `clock` also implements [`Sleep`], the implementation should
 ///    ensure that if
 ///    `let deadline: <clock as Clock>::Instant = ...; clock.schedule(deadline).await;`
 ///    can be ordered with a "happens before" relationship relative to
@@ -199,12 +231,12 @@ pub unsafe trait Monotonic: ClockOnce {}
 ///
 /// The implication of this choice is that implementations can't provide
 /// sleeping behavior without a way to retrieve the current time.
-pub trait SchedulerOnce: ClockOnce {
-  /// Output type for [`Self::schedule_once`].
+pub trait SleepOnce<D> {
+  /// Output type for [`Self::sleep_once`].
   ///
   /// This timer is a future that resolves once the current time of this
   /// scheduler is equal or larger than the deadline provided to
-  /// [`Self::schedule_once`].
+  /// [`Self::sleep_once`].
   ///
   /// Dropping the value cancels the timer.
   ///
@@ -255,21 +287,35 @@ pub trait SchedulerOnce: ClockOnce {
   /// polling the timer can fail. Most implementation should be fine with an
   /// infallible API. If the need for better fallible scheduler support
   /// in this crate arises, a new trait may be added in a future version.
-  fn schedule_once(self, deadline: <Self as ClockOnce>::Instant) -> Self::Timer;
+  fn sleep_once(self, duration: D) -> Self::Timer;
 }
 
-pub trait SchedulerMut: SchedulerOnce + ClockMut {
-  fn schedule_mut(&mut self, deadline: <Self as ClockOnce>::Instant) -> Self::Timer;
+pub trait SleepMut<D>: SleepOnce<D> + ClockMut {
+  fn sleep_mut(&mut self, duration: D) -> Self::Timer;
 }
 
-pub trait Scheduler: SchedulerMut + Clock {
-  fn schedule(&self, deadline: <Self as ClockOnce>::Instant) -> Self::Timer;
+pub trait Sleep<D>: SleepMut<D> + Clock {
+  fn sleep(&self, duration: D) -> Self::Timer;
 }
 
-/// Trait alias for `Clock + Send + Sync`.
-///
-/// This trait is implemented automatically if the type implements
-/// the super traits.
+// /// Trait alias for `Clock + Send + Sync`.
+// ///
+// /// This trait is implemented automatically if the type implements
+// /// the super traits.
+// ///
+// /// # Blanket implementation
+// ///
+// /// This trait is implemented using a blanket implementation for all types
+// /// implementing the super traits. If you wish to use types implementing this
+// /// trait, you can use it as a trait bound. If you wish to implement this trait,
+// /// you should instead implement the super traits.
+// pub trait SyncClock: ClockOnce + Send + Sync + private::SyncClockSealed {}
+//
+// impl<T> private::SyncClockSealed for T where T: ClockOnce + Send + Sync {}
+//
+// impl<T> SyncClock for T where T: ClockOnce + Send + Sync {}
+
+/// Dyn-compatible version of [`Sleep`].
 ///
 /// # Blanket implementation
 ///
@@ -277,73 +323,59 @@ pub trait Scheduler: SchedulerMut + Clock {
 /// implementing the super traits. If you wish to use types implementing this
 /// trait, you can use it as a trait bound. If you wish to implement this trait,
 /// you should instead implement the super traits.
-pub trait SyncClock: ClockOnce + Send + Sync + private::SyncClockSealed {}
-
-impl<T> private::SyncClockSealed for T where T: ClockOnce + Send + Sync {}
-
-impl<T> SyncClock for T where T: ClockOnce + Send + Sync {}
-
-/// Dyn-compatible version of [`Scheduler`].
-///
-/// # Blanket implementation
-///
-/// This trait is implemented using a blanket implementation for all types
-/// implementing the super traits. If you wish to use types implementing this
-/// trait, you can use it as a trait bound. If you wish to implement this trait,
-/// you should instead implement the super traits.
 #[cfg(feature = "std")]
-pub trait ErasedSchedulerOnce: SchedulerOnce + private::ErasedSchedulerSealed {
-  fn erased_schedule_once(self, deadline: <Self as ClockOnce>::Instant) -> Box<dyn Future<Output = ()>>;
+pub trait ErasedSchedulerOnce<D>: SleepOnce<D> + private::ErasedSchedulerSealed<D> {
+  fn erased_schedule_once(self, duration: D) -> Box<dyn Future<Output = ()>>;
 }
 
 #[cfg(feature = "std")]
-impl<T> private::ErasedSchedulerSealed for T
+impl<D, T> private::ErasedSchedulerSealed<D> for T
 where
-  T: SchedulerOnce,
+  T: SleepOnce<D>,
   T::Timer: Send + Sync + 'static,
 {
 }
 
 #[cfg(feature = "std")]
-impl<T> ErasedSchedulerOnce for T
+impl<D, T> ErasedSchedulerOnce<D> for T
 where
-  T: SchedulerOnce,
+  T: SleepOnce<D>,
   T::Timer: Send + Sync + 'static,
 {
-  fn erased_schedule_once(self, deadline: <Self as ClockOnce>::Instant) -> Box<dyn Future<Output = ()>> {
-    Box::new(self.schedule_once(deadline))
+  fn erased_schedule_once(self, duration: D) -> Box<dyn Future<Output = ()>> {
+    Box::new(self.sleep_once(duration))
   }
 }
 
 #[cfg(feature = "std")]
-pub trait ErasedSchedulerMut: ErasedSchedulerOnce + SchedulerMut {
-  fn erased_schedule_mut(&mut self, deadline: <Self as ClockOnce>::Instant) -> Box<dyn Future<Output = ()>>;
+pub trait ErasedSchedulerMut<D>: ErasedSchedulerOnce<D> + SleepMut<D> {
+  fn erased_schedule_mut(&mut self, duration: D) -> Box<dyn Future<Output = ()>>;
 }
 
 #[cfg(feature = "std")]
-impl<T> ErasedSchedulerMut for T
+impl<D, T> ErasedSchedulerMut<D> for T
 where
-  T: ErasedSchedulerOnce + SchedulerMut,
+  T: ErasedSchedulerOnce<D> + SleepMut<D>,
   T::Timer: Send + Sync + 'static,
 {
-  fn erased_schedule_mut(&mut self, deadline: <Self as ClockOnce>::Instant) -> Box<dyn Future<Output = ()>> {
-    Box::new(self.schedule_mut(deadline))
+  fn erased_schedule_mut(&mut self, duration: D) -> Box<dyn Future<Output = ()>> {
+    Box::new(self.sleep_mut(duration))
   }
 }
 
 #[cfg(feature = "std")]
-pub trait ErasedScheduler: ErasedSchedulerMut + Scheduler {
-  fn erased_schedule(&self, deadline: <Self as ClockOnce>::Instant) -> Box<dyn Future<Output = ()>>;
+pub trait ErasedScheduler<D>: ErasedSchedulerMut<D> + Sleep<D> {
+  fn erased_schedule(&self, duration: D) -> Box<dyn Future<Output = ()>>;
 }
 
 #[cfg(feature = "std")]
-impl<T> ErasedScheduler for T
+impl<D, T> ErasedScheduler<D> for T
 where
-  T: ErasedSchedulerMut + Scheduler,
+  T: ErasedSchedulerMut<D> + Sleep<D>,
   T::Timer: Send + Sync + 'static,
 {
-  fn erased_schedule(&self, deadline: <Self as ClockOnce>::Instant) -> Box<dyn Future<Output = ()>> {
-    Box::new(self.schedule(deadline))
+  fn erased_schedule(&self, duration: D) -> Box<dyn Future<Output = ()>> {
+    Box::new(self.sleep(duration))
   }
 }
 
@@ -383,10 +415,10 @@ where
 /// trait, you can use it as a trait bound. If you wish to implement this trait,
 /// you should instead implement the super traits.
 #[cfg(feature = "std")]
-pub trait StdScheduler: StdClock + SchedulerOnce {}
+pub trait StdScheduler: StdClock + Sleep<::std::time::Duration> {}
 
 #[cfg(feature = "std")]
-impl<T> StdScheduler for T where T: StdClock + SchedulerOnce {}
+impl<T> StdScheduler for T where T: StdClock + Sleep<::std::time::Duration> {}
 
 /// Alias trait for `ChronoClock + ErasedScheduler`
 ///
@@ -397,10 +429,10 @@ impl<T> StdScheduler for T where T: StdClock + SchedulerOnce {}
 /// trait, you can use it as a trait bound. If you wish to implement this trait,
 /// you should instead implement the super traits.
 #[cfg(feature = "std")]
-pub trait ErasedStdScheduler: StdClock + SchedulerOnce {}
+pub trait ErasedStdScheduler: StdClock + Sleep<::std::time::Duration> {}
 
 #[cfg(feature = "std")]
-impl<T> ErasedStdScheduler for T where T: StdClock + SchedulerOnce {}
+impl<T> ErasedStdScheduler for T where T: StdClock + Sleep<::std::time::Duration> {}
 
 /// Trait for a source of the current time, as a [`chrono::DateTime<Utc>`](::chrono04::DateTime).
 ///
@@ -438,10 +470,10 @@ where
 /// trait, you can use it as a trait bound. If you wish to implement this trait,
 /// you should instead implement the super traits.
 #[cfg(feature = "chrono04")]
-pub trait ChronoScheduler: ChronoClock + SchedulerOnce {}
+pub trait ChronoScheduler: ChronoClock + Sleep<::chrono04::TimeDelta> + Send + Sync {}
 
 #[cfg(feature = "chrono04")]
-impl<T> ChronoScheduler for T where T: ChronoClock + SchedulerOnce {}
+impl<T> ChronoScheduler for T where T: ChronoClock + Sleep<::chrono04::TimeDelta> + Send + Sync {}
 
 /// Alias trait for `ChronoClock + ErasedScheduler`
 ///
@@ -452,7 +484,7 @@ impl<T> ChronoScheduler for T where T: ChronoClock + SchedulerOnce {}
 /// trait, you can use it as a trait bound. If you wish to implement this trait,
 /// you should instead implement the super traits.
 #[cfg(feature = "chrono04")]
-pub trait ErasedChronoScheduler: ChronoClock + SchedulerOnce {}
+pub trait ErasedChronoScheduler: ChronoClock + Sleep<::chrono04::TimeDelta> + Send + Sync {}
 
 #[cfg(feature = "chrono04")]
-impl<T> ErasedChronoScheduler for T where T: ChronoClock + SchedulerOnce {}
+impl<T> ErasedChronoScheduler for T where T: ChronoClock + Sleep<::chrono04::TimeDelta> + Send + Sync {}

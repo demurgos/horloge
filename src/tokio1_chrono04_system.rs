@@ -1,7 +1,7 @@
-use crate::private::chrono::chrono_to_std;
-use crate::{impl_clock, SchedulerOnce};
+use crate::{impl_clock, impl_sleep};
+use chrono04::TimeDelta;
 use ::chrono04::{DateTime, Utc};
-use tokio1::time::{sleep_until, Instant};
+use tokio1::time::sleep;
 
 /// Tokio scheduler with chrono types using the system time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -21,11 +21,13 @@ impl_clock! {
 /// its `Scheduler` implementation.
 pub type SystemTokio1Chrono04Timer = ::tokio1::time::Sleep;
 
-impl SchedulerOnce for &'_ SystemTokio1Chrono04Clock {
-  type Timer = SystemTokio1Chrono04Timer;
+impl_sleep! {
+  impl Sleep<TimeDelta> for SystemTokio1Chrono04Clock {
+    type Timer = SystemTokio1Chrono04Timer;
 
-  fn schedule_once(self, deadline: DateTime<Utc>) -> Self::Timer {
-    sleep_until(Instant::from_std(chrono_to_std(deadline)))
+    fn sleep(&this, duration: TimeDelta) -> Self::Timer {
+      sleep(duration.to_std().unwrap())
+    }
   }
 }
 

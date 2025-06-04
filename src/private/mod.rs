@@ -6,7 +6,7 @@ pub trait SyncClockSealed {}
 
 /// Private trait to implement sealing for [`ErasedScheduler`]
 #[cfg(feature = "std")]
-pub trait ErasedSchedulerSealed {}
+pub trait ErasedSchedulerSealed<D> {}
 
 /// Private trait to implement sealing for [`StdClock`]
 #[cfg(feature = "std")]

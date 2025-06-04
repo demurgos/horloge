@@ -1,5 +1,5 @@
 use crate::private::chrono::TIME_DELTA_ZERO;
-use crate::{impl_clock, SchedulerOnce};
+use crate::{impl_clock, impl_sleep};
 use chrono04::TimeDelta;
 use ::chrono04::{DateTime, Utc};
 use std::collections::BTreeMap;
@@ -100,7 +100,8 @@ impl VirtualClockState {
   }
 
   /// Create a new [`VirtualTimer`] key for the provided deadline.
-  fn schedule(&self, deadline: DateTime<Utc>) -> (DateTime<Utc>, usize) {
+  fn sleep(&self, duration: TimeDelta) -> (DateTime<Utc>, usize) {
+    let deadline: DateTime<Utc> = self.now() + duration;
     let id = self.timer_id.fetch_add(1, Ordering::SeqCst);
     (deadline, id)
   }
@@ -158,13 +159,15 @@ impl Future for VirtualTimer {
   }
 }
 
-impl SchedulerOnce for &'_ VirtualTokio1Chrono04Clock {
-  type Timer = VirtualTimer;
+impl_sleep! {
+  impl Sleep<TimeDelta> for VirtualTokio1Chrono04Clock {
+    type Timer = VirtualTimer;
 
-  fn schedule_once(self, deadline: DateTime<Utc>) -> Self::Timer {
-    let state = Arc::clone(&self.state);
-    let key = state.schedule(deadline);
-    VirtualTimer { key, state }
+    fn sleep(&this, duration: TimeDelta) -> Self::Timer {
+      let state = Arc::clone(&this.state);
+      let key = state.sleep(duration);
+      VirtualTimer { key, state }
+    }
   }
 }
 
