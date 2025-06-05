@@ -24,6 +24,24 @@ pub use tokio1_chrono04_system::*;
 #[cfg(all(feature = "std", feature = "chrono04", feature = "tokio1"))]
 pub use tokio1_chrono04_virtual::*;
 
+pub trait Duration: PartialOrd {
+  fn zero() -> Self;
+}
+
+#[cfg(feature = "std")]
+impl Duration for ::std::time::Duration {
+  fn zero() -> Self {
+    Self::ZERO
+  }
+}
+
+#[cfg(feature = "chrono04")]
+impl Duration for ::chrono04::TimeDelta {
+  fn zero() -> Self {
+    ::chrono04::TimeDelta::zero()
+  }
+}
+
 #[macro_export]
 macro_rules! impl_clock {
   {
@@ -443,7 +461,7 @@ impl<T> ErasedStdScheduler for T where T: StdClock + Sleep<::std::time::Duration
 /// trait, you can use it as a trait bound. If you wish to implement this trait,
 /// you should instead implement the super traits.
 #[cfg(feature = "chrono04")]
-pub trait ChronoClock: Clock<Instant = ::chrono04::DateTime<::chrono04::Utc>> + private::ChronoClockSealed {
+pub trait Chrono04Clock: Clock<Instant = ::chrono04::DateTime<::chrono04::Utc>> + private::ChronoClockSealed {
   /// Retrieve the current time, as a [`chrono::DateTime<Utc>`](::chrono04::DateTime).
   fn now_chrono(&self) -> ::chrono04::DateTime<::chrono04::Utc>;
 }
@@ -452,7 +470,7 @@ pub trait ChronoClock: Clock<Instant = ::chrono04::DateTime<::chrono04::Utc>> + 
 impl<T> private::ChronoClockSealed for T where T: Clock<Instant = ::chrono04::DateTime<::chrono04::Utc>> {}
 
 #[cfg(feature = "chrono04")]
-impl<T> ChronoClock for T
+impl<T> Chrono04Clock for T
 where
   T: Clock<Instant = ::chrono04::DateTime<::chrono04::Utc>>,
 {
@@ -470,10 +488,10 @@ where
 /// trait, you can use it as a trait bound. If you wish to implement this trait,
 /// you should instead implement the super traits.
 #[cfg(feature = "chrono04")]
-pub trait ChronoScheduler: ChronoClock + Sleep<::chrono04::TimeDelta> + Send + Sync {}
+pub trait Chrono04Scheduler: Chrono04Clock + Sleep<::chrono04::TimeDelta> + Send + Sync {}
 
 #[cfg(feature = "chrono04")]
-impl<T> ChronoScheduler for T where T: ChronoClock + Sleep<::chrono04::TimeDelta> + Send + Sync {}
+impl<T> Chrono04Scheduler for T where T: Chrono04Clock + Sleep<::chrono04::TimeDelta> + Send + Sync {}
 
 /// Alias trait for `ChronoClock + ErasedScheduler`
 ///
@@ -484,7 +502,7 @@ impl<T> ChronoScheduler for T where T: ChronoClock + Sleep<::chrono04::TimeDelta
 /// trait, you can use it as a trait bound. If you wish to implement this trait,
 /// you should instead implement the super traits.
 #[cfg(feature = "chrono04")]
-pub trait ErasedChronoScheduler: ChronoClock + ErasedScheduler<::chrono04::TimeDelta> + Send + Sync {}
+pub trait ErasedChrono04Scheduler: Chrono04Clock + ErasedScheduler<::chrono04::TimeDelta> + Send + Sync {}
 
 #[cfg(feature = "chrono04")]
-impl<T> ErasedChronoScheduler for T where T: ChronoClock + ErasedScheduler<::chrono04::TimeDelta> + Send + Sync {}
+impl<T> ErasedChrono04Scheduler for T where T: Chrono04Clock + ErasedScheduler<::chrono04::TimeDelta> + Send + Sync {}
