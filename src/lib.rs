@@ -332,7 +332,7 @@ pub trait ErasedSchedulerOnce<D>: private::ErasedSchedulerSealed<D> {
 impl<D, T> private::ErasedSchedulerSealed<D> for T
 where
   T: SleepOnce<D>,
-  T::Timer: Send + Sync + 'static,
+  T::Timer: Send + 'static,
 {
 }
 
@@ -340,7 +340,7 @@ where
 impl<D, T> ErasedSchedulerOnce<D> for T
 where
   T: SleepOnce<D>,
-  T::Timer: Send + Sync + 'static,
+  T::Timer: Send + 'static,
 {
   fn erased_schedule_once(self, duration: D) -> Box<dyn Future<Output = ()>> {
     Box::new(self.sleep_once(duration))
@@ -356,7 +356,7 @@ pub trait ErasedSchedulerMut<D>: ErasedSchedulerOnce<D> {
 impl<D, T> ErasedSchedulerMut<D> for T
 where
   T: ErasedSchedulerOnce<D> + SleepMut<D>,
-  T::Timer: Send + Sync + 'static,
+  T::Timer: Send + 'static,
 {
   fn erased_schedule_mut(&mut self, duration: D) -> Box<dyn Future<Output = ()>> {
     Box::new(self.sleep_mut(duration))
@@ -372,7 +372,7 @@ pub trait ErasedScheduler<D>: ErasedSchedulerMut<D> {
 impl<D, T> ErasedScheduler<D> for T
 where
   T: ErasedSchedulerMut<D> + Sleep<D>,
-  T::Timer: Send + Sync + 'static,
+  T::Timer: Send + 'static,
 {
   fn erased_schedule(&self, duration: D) -> Box<dyn Future<Output = ()>> {
     Box::new(self.sleep(duration))
