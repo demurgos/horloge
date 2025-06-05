@@ -14,11 +14,11 @@ pub trait ClockExt: Clock + private::SchedulerExtSealed {
     Self::Instant: Sub<Self::Instant, Output: Duration>;
 }
 
-impl<T> private::SchedulerExtSealed for T where T: Clock {}
+impl<T> private::SchedulerExtSealed for T where T: ?Sized + Clock {}
 
 impl<T> ClockExt for T
 where
-  T: Clock,
+  T: ?Sized + Clock,
 {
   fn saturating_duration_since(&self, earlier: Self::Instant) -> <Self::Instant as Sub<Self::Instant>>::Output
   where

@@ -34,7 +34,7 @@ impl_sleep! {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::{ChronoClock, Clock, ErasedChronoScheduler};
+  use crate::{Chrono04Clock, Clock, ErasedChrono04Scheduler, ClockExt};
   use ::chrono04::TimeDelta;
   const ONE_YEAR: TimeDelta = TimeDelta::new(365 * 24 * 60 * 60, 0).expect("constant time delta is valid");
 
@@ -57,15 +57,16 @@ mod tests {
 
   fn use_chrono_clock<TyClock>(clock: &TyClock)
   where
-    TyClock: ChronoClock,
+    TyClock: Chrono04Clock,
   {
     let one_year_ago = Utc::now() - ONE_YEAR;
     let now: DateTime<Utc> = clock.now_chrono();
     assert!(now > one_year_ago);
   }
 
-  fn use_dyn(scheduler: Box<dyn ErasedChronoScheduler>)
+  fn use_dyn(scheduler: Box<dyn ErasedChrono04Scheduler>)
   {
-    scheduler.now_chrono();
+    let now = scheduler.now_chrono();
+    let elapsed = scheduler.saturating_duration_since(now);
   }
 }

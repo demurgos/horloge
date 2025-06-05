@@ -173,7 +173,7 @@ impl_sleep! {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::{ChronoClock, Clock};
+  use crate::{Chrono04Clock, Clock};
   use ::chrono04::TimeDelta;
   use chrono04::TimeZone;
   use std::sync::LazyLock;
@@ -206,7 +206,7 @@ mod tests {
 
   fn use_chrono_clock<TyClock>(clock: &TyClock)
   where
-    TyClock: ChronoClock,
+    TyClock: Chrono04Clock,
   {
     let one_year_ago = Utc::now() - ONE_YEAR;
     let now: DateTime<Utc> = clock.now_chrono();
