@@ -1,4 +1,3 @@
-use crate::private::chrono::TIME_DELTA_ZERO;
 use crate::{impl_clock, impl_sleep};
 use chrono04::TimeDelta;
 use ::chrono04::{DateTime, Utc};
@@ -56,7 +55,7 @@ impl VirtualClockState {
       None => {
         // chrono returns `None` if there's an overflow in either direction
         // we need to compare with zero to recover the sign
-        if d < TIME_DELTA_ZERO { i64::MIN } else { i64::MAX }
+        if d < TimeDelta::zero() { i64::MIN } else { i64::MAX }
       }
     };
     let d: u64 = u64::try_from(d).unwrap_or(0u64);

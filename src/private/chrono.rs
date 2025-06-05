@@ -1,10 +1,6 @@
 //! Private helpers for Chrono.
 
-use chrono04::TimeDelta;
 use ::chrono04::{DateTime, Utc};
-
-/// Empty time delta.
-pub(crate) const TIME_DELTA_ZERO: TimeDelta = TimeDelta::new(0, 0).expect("the time delta zero is valid");
 
 /// Convert a chrono [`DateTime<Utc>`](DateTime) into a standard [`Instant`](::std::time::Instant)
 #[cfg(feature = "tokio1")]
