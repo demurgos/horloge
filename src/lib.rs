@@ -354,7 +354,7 @@ pub trait Sleep<D>: SleepMut<D> {
 /// you should instead implement the super traits.
 #[cfg(feature = "std")]
 pub trait ErasedSleepOnce<D>: private::ErasedSchedulerSealed<D> {
-  fn erased_sleep_once(self, duration: D) -> ::std::pin::Pin<Box<dyn Future<Output = ()>>>;
+  fn erased_sleep_once(self, duration: D) -> ::std::pin::Pin<Box<dyn Future<Output = ()> + Send>>;
 }
 
 #[cfg(feature = "std")]
@@ -371,14 +371,14 @@ where
   T: SleepOnce<D>,
   T::Timer: Send + 'static,
 {
-  fn erased_sleep_once(self, duration: D) -> ::std::pin::Pin<Box<dyn Future<Output = ()>>> {
+  fn erased_sleep_once(self, duration: D) -> ::std::pin::Pin<Box<dyn Future<Output = ()> + Send>> {
     Box::pin(self.sleep_once(duration))
   }
 }
 
 #[cfg(feature = "std")]
 pub trait ErasedSleepMut<D>: ErasedSleepOnce<D> {
-  fn erased_sleep_mut(&mut self, duration: D) -> ::std::pin::Pin<Box<dyn Future<Output = ()>>>;
+  fn erased_sleep_mut(&mut self, duration: D) -> ::std::pin::Pin<Box<dyn Future<Output = ()> + Send>>;
 }
 
 #[cfg(feature = "std")]
@@ -387,14 +387,14 @@ where
   T: ErasedSleepOnce<D> + SleepMut<D>,
   T::Timer: Send + 'static,
 {
-  fn erased_sleep_mut(&mut self, duration: D) -> ::std::pin::Pin<Box<dyn Future<Output = ()>>> {
+  fn erased_sleep_mut(&mut self, duration: D) -> ::std::pin::Pin<Box<dyn Future<Output = ()> + Send>> {
     Box::pin(self.sleep_mut(duration))
   }
 }
 
 #[cfg(feature = "std")]
 pub trait ErasedSleep<D>: ErasedSleepMut<D> {
-  fn erased_sleep(&self, duration: D) -> ::std::pin::Pin<Box<dyn Future<Output = ()>>>;
+  fn erased_sleep(&self, duration: D) -> ::std::pin::Pin<Box<dyn Future<Output = ()> + Send>>;
 }
 
 #[cfg(feature = "std")]
@@ -403,7 +403,7 @@ where
   T: ErasedSleepMut<D> + Sleep<D>,
   T::Timer: Send + 'static,
 {
-  fn erased_sleep(&self, duration: D) -> ::std::pin::Pin<Box<dyn Future<Output = ()>>> {
+  fn erased_sleep(&self, duration: D) -> ::std::pin::Pin<Box<dyn Future<Output = ()> + Send>> {
     Box::pin(self.sleep(duration))
   }
 }
