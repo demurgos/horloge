@@ -290,11 +290,11 @@ pub trait SleepOnce<D> {
   fn sleep_once(self, duration: D) -> Self::Timer;
 }
 
-pub trait SleepMut<D>: SleepOnce<D> + ClockMut {
+pub trait SleepMut<D>: SleepOnce<D> {
   fn sleep_mut(&mut self, duration: D) -> Self::Timer;
 }
 
-pub trait Sleep<D>: SleepMut<D> + Clock {
+pub trait Sleep<D>: SleepMut<D> {
   fn sleep(&self, duration: D) -> Self::Timer;
 }
 
@@ -324,7 +324,7 @@ pub trait Sleep<D>: SleepMut<D> + Clock {
 /// trait, you can use it as a trait bound. If you wish to implement this trait,
 /// you should instead implement the super traits.
 #[cfg(feature = "std")]
-pub trait ErasedSchedulerOnce<D>: SleepOnce<D> + private::ErasedSchedulerSealed<D> {
+pub trait ErasedSchedulerOnce<D>: private::ErasedSchedulerSealed<D> {
   fn erased_schedule_once(self, duration: D) -> Box<dyn Future<Output = ()>>;
 }
 
@@ -348,7 +348,7 @@ where
 }
 
 #[cfg(feature = "std")]
-pub trait ErasedSchedulerMut<D>: ErasedSchedulerOnce<D> + SleepMut<D> {
+pub trait ErasedSchedulerMut<D>: ErasedSchedulerOnce<D> {
   fn erased_schedule_mut(&mut self, duration: D) -> Box<dyn Future<Output = ()>>;
 }
 
@@ -364,7 +364,7 @@ where
 }
 
 #[cfg(feature = "std")]
-pub trait ErasedScheduler<D>: ErasedSchedulerMut<D> + Sleep<D> {
+pub trait ErasedScheduler<D>: ErasedSchedulerMut<D> {
   fn erased_schedule(&self, duration: D) -> Box<dyn Future<Output = ()>>;
 }
 
@@ -484,7 +484,7 @@ impl<T> ChronoScheduler for T where T: ChronoClock + Sleep<::chrono04::TimeDelta
 /// trait, you can use it as a trait bound. If you wish to implement this trait,
 /// you should instead implement the super traits.
 #[cfg(feature = "chrono04")]
-pub trait ErasedChronoScheduler: ChronoClock + Sleep<::chrono04::TimeDelta> + Send + Sync {}
+pub trait ErasedChronoScheduler: ChronoClock + ErasedScheduler<::chrono04::TimeDelta> + Send + Sync {}
 
 #[cfg(feature = "chrono04")]
-impl<T> ErasedChronoScheduler for T where T: ChronoClock + Sleep<::chrono04::TimeDelta> + Send + Sync {}
+impl<T> ErasedChronoScheduler for T where T: ChronoClock + ErasedScheduler<::chrono04::TimeDelta> + Send + Sync {}

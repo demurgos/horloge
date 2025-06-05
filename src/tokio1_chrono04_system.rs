@@ -34,7 +34,7 @@ impl_sleep! {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::{ChronoClock, Clock};
+  use crate::{ChronoClock, Clock, ErasedChronoScheduler};
   use ::chrono04::TimeDelta;
   const ONE_YEAR: TimeDelta = TimeDelta::new(365 * 24 * 60 * 60, 0).expect("constant time delta is valid");
 
@@ -62,5 +62,10 @@ mod tests {
     let one_year_ago = Utc::now() - ONE_YEAR;
     let now: DateTime<Utc> = clock.now_chrono();
     assert!(now > one_year_ago);
+  }
+
+  fn use_dyn(scheduler: Box<dyn ErasedChronoScheduler>)
+  {
+    scheduler.now_chrono();
   }
 }
