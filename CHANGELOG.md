@@ -1,4 +1,4 @@
-# Next
+# 0.2.2 (2025-06-23)
 
 - **[Fix]** Fix recursive trait bound for `Chrono04Clock` and `StdClock`.
 
