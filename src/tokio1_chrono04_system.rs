@@ -1,36 +1,40 @@
-use crate::{Clock, Scheduler};
+use crate::{impl_now, impl_sleep};
+use chrono04::TimeDelta;
 use ::chrono04::{DateTime, Utc};
-use ::tokio1::time::{sleep_until, Instant};
-use crate::private::chrono::chrono_to_std;
+use tokio1::time::sleep;
 
-/// Tokio scheduler with chrono types using the system time.
+/// Tokio clock with chrono types using the system time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SystemTokio1Chrono04Clock;
 
-impl Clock for SystemTokio1Chrono04Clock {
-  type Instant = DateTime<Utc>;
+impl_now! {
+  impl Now for SystemTokio1Chrono04Clock {
+    type Instant = DateTime<Utc>;
 
-  fn now(&self) -> Self::Instant {
-    Utc::now()
+    fn now(&this)-> Self::Instant {
+      Utc::now()
+    }
   }
 }
 
 /// Type alias for the timer type used by `SystemTokio1Chrono04Clock` for
-/// its `Scheduler` implementation.
+/// its `Clock` implementation.
 pub type SystemTokio1Chrono04Timer = ::tokio1::time::Sleep;
 
-impl Scheduler for SystemTokio1Chrono04Clock {
-  type Timer = SystemTokio1Chrono04Timer;
+impl_sleep! {
+  impl Sleep<TimeDelta> for SystemTokio1Chrono04Clock {
+    type Timer = SystemTokio1Chrono04Timer;
 
-  fn schedule(&self, deadline: DateTime<Utc>) -> Self::Timer {
-    sleep_until(Instant::from_std(chrono_to_std(deadline)))
+    fn sleep(&this, duration: TimeDelta) -> Self::Timer {
+      sleep(duration.to_std().unwrap())
+    }
   }
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::ChronoClock;
+  use crate::{Chrono04Now, ErasedChrono04Clock, Now, NowExt};
   use ::chrono04::TimeDelta;
   const ONE_YEAR: TimeDelta = TimeDelta::new(365 * 24 * 60 * 60, 0).expect("constant time delta is valid");
 
@@ -39,11 +43,12 @@ mod tests {
     let clock = SystemTokio1Chrono04Clock;
     use_clock(&clock);
     use_chrono_clock(&clock);
+    use_dyn(Box::new(clock));
   }
 
-  fn use_clock<TyClock>(clock: &TyClock)
+  fn use_clock<TyNow>(clock: &TyNow)
   where
-    TyClock: Clock<Instant = DateTime<Utc>>,
+    TyNow: Now<Instant = DateTime<Utc>>,
   {
     let one_year_ago = Utc::now() - ONE_YEAR;
     let now: DateTime<Utc> = clock.now();
@@ -51,12 +56,18 @@ mod tests {
     use_chrono_clock(clock);
   }
 
-  fn use_chrono_clock<TyClock>(clock: &TyClock)
+  fn use_chrono_clock<TyNow>(clock: &TyNow)
   where
-    TyClock: ChronoClock,
+    TyNow: Chrono04Now,
   {
     let one_year_ago = Utc::now() - ONE_YEAR;
     let now: DateTime<Utc> = clock.now_chrono();
     assert!(now > one_year_ago);
+  }
+
+  fn use_dyn(clock: Box<dyn ErasedChrono04Clock>) {
+    let now = clock.now_chrono();
+    let elapsed = clock.saturating_duration_since(now);
+    assert!(elapsed >= TimeDelta::zero());
   }
 }

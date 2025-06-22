@@ -1,4 +1,4 @@
-use crate::{Clock, Monotonic};
+use crate::{impl_now, Monotonic};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
@@ -60,12 +60,14 @@ impl VirtualStdClock {
   }
 }
 
-impl Clock for VirtualStdClock {
-  type Instant = Instant;
+impl_now! {
+  impl Now for VirtualStdClock {
+    type Instant = Instant;
 
-  fn now(&self) -> Self::Instant {
-    let current_offset = self.offset.load(Ordering::SeqCst);
-    self.start + Duration::from_nanos(current_offset)
+    fn now(&this) -> Self::Instant {
+      let current_offset = this.offset.load(Ordering::SeqCst);
+      this.start + Duration::from_nanos(current_offset)
+    }
   }
 }
 
@@ -78,7 +80,7 @@ unsafe impl Monotonic for VirtualStdClock {}
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::StdClock;
+  use crate::{Now, StdNow};
   const ONE_YEAR: Duration = Duration::new(365 * 24 * 60 * 60, 0);
 
   #[test]
@@ -89,9 +91,9 @@ mod tests {
     use_std_clock(&clock);
   }
 
-  fn use_clock<TyClock>(clock: &TyClock)
+  fn use_clock<TyNow>(clock: &TyNow)
   where
-    TyClock: Clock<Instant = Instant> + Monotonic,
+    TyNow: Now<Instant = Instant> + Monotonic,
   {
     let one_year_ago = Instant::now() - ONE_YEAR;
     let now = clock.now();
@@ -99,9 +101,9 @@ mod tests {
     use_std_clock(clock);
   }
 
-  fn use_std_clock<TyClock>(clock: &TyClock)
+  fn use_std_clock<TyNow>(clock: &TyNow)
   where
-    TyClock: StdClock + Monotonic,
+    TyNow: StdNow + Monotonic,
   {
     let one_year_ago = Instant::now() - ONE_YEAR;
     let now = clock.now_std();

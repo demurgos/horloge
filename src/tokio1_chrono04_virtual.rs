@@ -1,5 +1,4 @@
-use crate::private::chrono::TIME_DELTA_ZERO;
-use crate::{Clock, Scheduler};
+use crate::{impl_now, impl_sleep};
 use chrono04::TimeDelta;
 use ::chrono04::{DateTime, Utc};
 use std::collections::BTreeMap;
@@ -8,7 +7,7 @@ use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, RwLock};
 use std::task::{Context, Poll, Waker};
 
-/// Tokio scheduler with chrono types using virtual time.
+/// Tokio clock with chrono types using virtual time.
 pub struct VirtualTokio1Chrono04Clock {
   state: Arc<VirtualClockState>,
 }
@@ -56,7 +55,7 @@ impl VirtualClockState {
       None => {
         // chrono returns `None` if there's an overflow in either direction
         // we need to compare with zero to recover the sign
-        if d < TIME_DELTA_ZERO { i64::MIN } else { i64::MAX }
+        if d < TimeDelta::zero() { i64::MIN } else { i64::MAX }
       }
     };
     let d: u64 = u64::try_from(d).unwrap_or(0u64);
@@ -100,7 +99,8 @@ impl VirtualClockState {
   }
 
   /// Create a new [`VirtualTimer`] key for the provided deadline.
-  fn schedule(&self, deadline: DateTime<Utc>) -> (DateTime<Utc>, usize) {
+  fn sleep(&self, duration: TimeDelta) -> (DateTime<Utc>, usize) {
+    let deadline: DateTime<Utc> = self.now() + duration;
     let id = self.timer_id.fetch_add(1, Ordering::SeqCst);
     (deadline, id)
   }
@@ -123,11 +123,13 @@ impl VirtualClockState {
   }
 }
 
-impl Clock for VirtualTokio1Chrono04Clock {
-  type Instant = DateTime<Utc>;
+impl_now! {
+  impl Now for VirtualTokio1Chrono04Clock {
+    type Instant = DateTime<Utc>;
 
-  fn now(&self) -> DateTime<Utc> {
-    self.state.now()
+    fn now(&this)-> Self::Instant {
+      this.state.now()
+    }
   }
 }
 
@@ -156,20 +158,22 @@ impl Future for VirtualTimer {
   }
 }
 
-impl Scheduler for VirtualTokio1Chrono04Clock {
-  type Timer = VirtualTimer;
+impl_sleep! {
+  impl Sleep<TimeDelta> for VirtualTokio1Chrono04Clock {
+    type Timer = VirtualTimer;
 
-  fn schedule(&self, deadline: DateTime<Utc>) -> Self::Timer {
-    let state = Arc::clone(&self.state);
-    let key = state.schedule(deadline);
-    VirtualTimer { key, state }
+    fn sleep(&this, duration: TimeDelta) -> Self::Timer {
+      let state = Arc::clone(&this.state);
+      let key = state.sleep(duration);
+      VirtualTimer { key, state }
+    }
   }
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::ChronoClock;
+  use crate::{Chrono04Now, Now};
   use ::chrono04::TimeDelta;
   use chrono04::TimeZone;
   use std::sync::LazyLock;
@@ -190,9 +194,9 @@ mod tests {
     use_chrono_clock(&clock);
   }
 
-  fn use_clock<TyClock>(clock: &TyClock)
+  fn use_clock<TyNow>(clock: &TyNow)
   where
-    TyClock: Clock<Instant = DateTime<Utc>>,
+    TyNow: Now<Instant = DateTime<Utc>>,
   {
     let one_year_ago = Utc::now() - ONE_YEAR;
     let now: DateTime<Utc> = clock.now();
@@ -200,9 +204,9 @@ mod tests {
     use_chrono_clock(clock);
   }
 
-  fn use_chrono_clock<TyClock>(clock: &TyClock)
+  fn use_chrono_clock<TyNow>(clock: &TyNow)
   where
-    TyClock: ChronoClock,
+    TyNow: Chrono04Now,
   {
     let one_year_ago = Utc::now() - ONE_YEAR;
     let now: DateTime<Utc> = clock.now_chrono();
