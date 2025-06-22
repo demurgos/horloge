@@ -1,4 +1,4 @@
-# Next
+# 0.2.0 (2025-06-22)
 
 - **[Breaking change]** Fully refactor the crate to model the `now` and `sleep`
   operations based on the `Fn*` family of traits. Assume that the version 0.1
