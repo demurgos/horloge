@@ -8,6 +8,11 @@ use std::sync::{Arc, RwLock};
 use std::task::{Context, Poll, Waker};
 
 /// Tokio clock with chrono types using virtual time.
+///
+/// This struct is a handle to the internal state of the clock. The [`Clone`]
+/// implementation is shallow: cloning this type will create a new handle to
+/// the same underlying shared state.
+#[derive(Debug, Clone)]
 pub struct VirtualTokio1Chrono04Clock {
   state: Arc<VirtualClockState>,
 }
@@ -31,6 +36,7 @@ impl VirtualTokio1Chrono04Clock {
   }
 }
 
+#[derive(Debug)]
 pub struct VirtualClockState {
   start: DateTime<Utc>,
   offset: AtomicU64,
