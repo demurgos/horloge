@@ -34,29 +34,30 @@ impl_sleep! {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::{Chrono04Now, ErasedChrono04Clock, Now, NowExt};
+  use crate::{Chrono04Clock, Chrono04Now, ErasedChrono04Clock, Now, NowExt};
   use ::chrono04::TimeDelta;
   const ONE_YEAR: TimeDelta = TimeDelta::new(365 * 24 * 60 * 60, 0).expect("constant time delta is valid");
 
   #[test]
   fn test_now() {
     let clock = SystemTokio1Chrono04Clock;
-    use_clock(&clock);
-    use_chrono_clock(&clock);
-    use_dyn(Box::new(clock));
+    use_now(&clock);
+    use_chrono04_now(&clock);
+    use_chrono04_clock(&clock);
+    use_dyn_now(Box::new(clock));
   }
 
-  fn use_clock<TyNow>(clock: &TyNow)
+  fn use_now<TyNow>(clock: &TyNow)
   where
     TyNow: Now<Instant = DateTime<Utc>>,
   {
     let one_year_ago = Utc::now() - ONE_YEAR;
     let now: DateTime<Utc> = clock.now();
     assert!(now > one_year_ago);
-    use_chrono_clock(clock);
+    use_chrono04_now(clock);
   }
 
-  fn use_chrono_clock<TyNow>(clock: &TyNow)
+  fn use_chrono04_now<TyNow>(clock: &TyNow)
   where
     TyNow: Chrono04Now,
   {
@@ -65,9 +66,18 @@ mod tests {
     assert!(now > one_year_ago);
   }
 
-  fn use_dyn(clock: Box<dyn ErasedChrono04Clock>) {
+  fn use_dyn_now(clock: Box<dyn ErasedChrono04Clock>) {
     let now = clock.now_chrono();
     let elapsed = clock.saturating_duration_since(now);
     assert!(elapsed >= TimeDelta::zero());
+  }
+
+  fn use_chrono04_clock<TyClock>(clock: &TyClock)
+  where
+    TyClock: Chrono04Clock,
+  {
+    let one_year_ago = Utc::now() - ONE_YEAR;
+    let now: DateTime<Utc> = clock.now_chrono();
+    assert!(now > one_year_ago);
   }
 }

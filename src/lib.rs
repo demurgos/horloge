@@ -430,7 +430,7 @@ where
 pub trait StdClock: StdNow + Sleep<::std::time::Duration> {}
 
 #[cfg(feature = "std")]
-impl<T> StdClock for T where T: StdClock + Sleep<::std::time::Duration> {}
+impl<T> StdClock for T where T: StdNow + Sleep<::std::time::Duration> {}
 
 /// Alias trait for `StdNow + ErasedClock`
 ///
@@ -485,7 +485,7 @@ where
 pub trait Chrono04Clock: Chrono04Now + Sleep<::chrono04::TimeDelta> + Send + Sync {}
 
 #[cfg(feature = "chrono04")]
-impl<T> Chrono04Clock for T where T: Chrono04Clock + Sleep<::chrono04::TimeDelta> + Send + Sync {}
+impl<T> Chrono04Clock for T where T: Chrono04Now + Sleep<::chrono04::TimeDelta> + Send + Sync {}
 
 /// Alias trait for `ChronoNow + ErasedClock`
 ///

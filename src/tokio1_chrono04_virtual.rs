@@ -196,21 +196,21 @@ mod tests {
   fn test_now() {
     let start = *START;
     let clock = VirtualTokio1Chrono04Clock::new(start);
-    use_clock(&clock);
-    use_chrono_clock(&clock);
+    use_now(&clock);
+    use_chrono04_now(&clock);
   }
 
-  fn use_clock<TyNow>(clock: &TyNow)
+  fn use_now<TyNow>(clock: &TyNow)
   where
     TyNow: Now<Instant = DateTime<Utc>>,
   {
     let one_year_ago = Utc::now() - ONE_YEAR;
     let now: DateTime<Utc> = clock.now();
     assert!(now > one_year_ago);
-    use_chrono_clock(clock);
+    use_chrono04_now(clock);
   }
 
-  fn use_chrono_clock<TyNow>(clock: &TyNow)
+  fn use_chrono04_now<TyNow>(clock: &TyNow)
   where
     TyNow: Chrono04Now,
   {

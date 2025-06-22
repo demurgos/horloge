@@ -1,3 +1,7 @@
+# Next
+
+- **[Fix]** Fix recursive trait bound for `Chrono04Clock` and `StdClock`.
+
 # 0.2.1 (2025-06-23)
 
 - **[Feature]** Implement `Clone` for `VirtualTokio1Chrono04Clock`.
