@@ -1,4 +1,4 @@
-# Next
+# 0.2.1 (2025-06-23)
 
 - **[Feature]** Implement `Clone` for `VirtualTokio1Chrono04Clock`.
 
